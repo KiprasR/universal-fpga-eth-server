@@ -1,0 +1,33 @@
+# Files:
+
+*.bak
+*.cdb
+*.hdb
+*.rdb
+*.idb
+*.kpt
+*.ddb
+*.hsd
+*.ammdb
+*.sci
+*.tdb
+*.hb_info
+*.jic
+*.sof
+*.summary
+*.dpi
+*.rcfdb
+*.qws
+
+# Folders:
+
+db/
+.qsys_edit/
+greybox_tmp/
+output_files/
+incremental_db/
+simulation/
+build-*-Debug/
+build-*-Release/
+
+Libraries/
