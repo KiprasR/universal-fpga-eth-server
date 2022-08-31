@@ -14,9 +14,6 @@ module ClockCounter(
 
 	always @ (posedge Clk)
 	begin
-	
-		if (LaserRise) LaserCounter <= LaserCounter + 32'd1;
-
 		if (Counter < (ClkRate - 32'd1))
 		begin
 			Counter <= Counter + 32'd1;
@@ -28,6 +25,5 @@ module ClockCounter(
 			LaserCounter <= 32'd0;
 			Counter <= 32'd0;
 		end
-	
 	end
 endmodule

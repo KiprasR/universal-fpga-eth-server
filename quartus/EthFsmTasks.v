@@ -516,39 +516,19 @@ begin
 		TCP_RX_FIFO1 :
 		begin
 			Read1bRegisterWrapped(10'h230, Fifo, TCP_RX_FIFO2);	// RX_FIFO
-			//Read1bRegisterWrapped(10'h230, Fifo, ECHO1);			// RX_FIFO
-			//Read1bRegisterWrapped(10'h230, Fifo, (RxCountP == 32'h6) ? ECHO1 : TCP_RX_FIFO2);	// RX_FIFO
 			if (ONE_BYTE_DONE)
 				RxCount <= RxCount - 32'd2;
-		end
-		
-		/* Copy received data to TX fifo: */
-		ECHO1 :
-		begin
-			Write1bRegisterWrapped(10'h22E, Fifo, TCP_RX_FIFO2);	// TX_FIFO 
 		end
 		
 		TCP_RX_FIFO2 :
 		begin
 			Query <= {Query[63:0], Fifo};
-			//Query <= {Fifo, Query[79:16]};
-			//Query <= {Query[63:0], RxCount[15:0]};
-			//Query <= {Query[63:0], RxCountP[15:0]};
 			State <= (RxCount == 32'h0) ? TCP_RCV2 : TCP_RX_FIFO1;
 		end
 		
 		TCP_RCV2 :
 		begin
-			//Write1bRegisterWrapped(10'h202, 16'h40, TCP_RCV3A); 	// RECV
-			//Write1bRegisterWrapped(10'h202, 16'h40, ECHO2); 			// RECV
-			//Write1bRegisterWrapped(10'h202, 16'h40, ERROR1); 		// RECV
 			Write1bRegisterWrapped(10'h202, 16'h40, (Query == FREQ) ? RATE1 : QUERY1);		// RECV
-		end
-		
-		ECHO2 :
-		begin
-			TxCount <= (RxCountP >> 1);
-			State   <= TCP_RCV4;
 		end
 		
 		/* Send error message (no error codes yet!): */
@@ -563,19 +543,7 @@ begin
 			State <= (TxCount == 32'h3) ? TCP_RCV4 : ERROR1;
 		end
 		
-		/* Send OK (useless?): */
-		OK1 :
-		begin
-			Write1bRegisterWrapped(10'h22E, OK >> (TxCount << 4), OK2);
-			if (ONE_BYTE_DONE)
-				TxCount <= TxCount + 32'h1;
-		end
-		OK2 :
-		begin
-			State <= (TxCount == 32'h3) ? TCP_RCV4 : OK1;
-		end
-		
-		/* Returns back the original query: */
+		/* Return back the original query: */
 		QUERY1 :
 		begin
 			Write1bRegisterWrapped(10'h22E, (Query >> ((32'h4 - TxCount) << 4)), QUERY2);
@@ -587,7 +555,7 @@ begin
 			State <= (TxCount == 32'h5) ? TCP_RCV4 : QUERY1;
 		end
 		
-		/* Returns laser repetition rate: */
+		/* Return laser repetition rate: */
 		RATE1 :
 		begin
 			Write1bRegisterWrapped(10'h22E, LaserRate >> ((32'h1 - TxCount) << 4), RATE2);
