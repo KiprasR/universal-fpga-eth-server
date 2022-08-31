@@ -4,7 +4,7 @@ module ClockCounter(
 	output reg [31:0] LaserRate = 32'b0
 );
 
-	localparam ClkRate = 32'd49999999;
+	localparam ClkRate = 32'd50000000;
 
 	reg [2:0] LaserState;  always @(posedge Clk) LaserState <= {LaserState[1:0], Laser};
 	wire LaserRise = (LaserState[2:1] == 2'b01);

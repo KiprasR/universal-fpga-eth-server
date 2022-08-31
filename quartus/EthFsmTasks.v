@@ -78,6 +78,9 @@ localparam ERROR    = 48'h5221_524f_4552;
 localparam OK       = 32'h2121_4f4b;
 localparam ACQUIRE  = 48'h000A_4143_5120;
 
+/* OP codes: */
+localparam FREQ = 80'h0000_0000_0004_4652_513F;
+
 reg [32:0] TxCount;
 reg [32:0] RxCount;
 reg [32:0] RxCountP;
@@ -504,7 +507,6 @@ begin
 										 (RxCount == 32'h0) ? GET_STATE1 : TCP_RX_FIFO1);	/* RX_RSR */
 			if (TWO_BYTES_DONE)
 			begin
-				//Query    <= 80'hAABBCCDDEEFF11223344;
 				Query    <= 80'h0;
 				TxCount  <= 32'h0;
 				RxCountP <= RxCount;
@@ -540,9 +542,7 @@ begin
 			//Write1bRegisterWrapped(10'h202, 16'h40, TCP_RCV3A); 	// RECV
 			//Write1bRegisterWrapped(10'h202, 16'h40, ECHO2); 			// RECV
 			//Write1bRegisterWrapped(10'h202, 16'h40, ERROR1); 		// RECV
-			//Write1bRegisterWrapped(10'h202, 16'h40, (RxCountP == 32'h6) ? ECHO2 : ERROR1); 				// RECV
-			//Write1bRegisterWrapped(10'h202, 16'h40, (Query[79:32] == 48'h000841435120) ? OK1 : QUERY1);		// RECV
-			Write1bRegisterWrapped(10'h202, 16'h40, (Query[79:32] == 48'h000841435120) ? OK1 : RATE1);		// RECV
+			Write1bRegisterWrapped(10'h202, 16'h40, (Query == FREQ) ? RATE1 : QUERY1);		// RECV
 		end
 		
 		ECHO2 :
@@ -551,6 +551,7 @@ begin
 			State   <= TCP_RCV4;
 		end
 		
+		/* Send error message (no error codes yet!): */
 		ERROR1 :
 		begin
 			Write1bRegisterWrapped(10'h22E, ERROR >> (TxCount << 4), ERROR2);
@@ -562,6 +563,7 @@ begin
 			State <= (TxCount == 32'h3) ? TCP_RCV4 : ERROR1;
 		end
 		
+		/* Send OK (useless?): */
 		OK1 :
 		begin
 			Write1bRegisterWrapped(10'h22E, OK >> (TxCount << 4), OK2);
@@ -573,9 +575,10 @@ begin
 			State <= (TxCount == 32'h3) ? TCP_RCV4 : OK1;
 		end
 		
+		/* Returns back the original query: */
 		QUERY1 :
 		begin
-			Write1bRegisterWrapped(10'h22E, (Query >> (TxCount << 4)), QUERY2);
+			Write1bRegisterWrapped(10'h22E, (Query >> ((32'h4 - TxCount) << 4)), QUERY2);
 			if (ONE_BYTE_DONE)
 				TxCount <= TxCount + 32'h1;
 		end
@@ -584,9 +587,10 @@ begin
 			State <= (TxCount == 32'h5) ? TCP_RCV4 : QUERY1;
 		end
 		
+		/* Returns laser repetition rate: */
 		RATE1 :
 		begin
-			Write1bRegisterWrapped(10'h22E, LaserRate >> (TxCount << 4), RATE2);
+			Write1bRegisterWrapped(10'h22E, LaserRate >> ((32'h1 - TxCount) << 4), RATE2);
 			if (ONE_BYTE_DONE)
 				TxCount <= TxCount + 32'h1;
 		end
@@ -594,100 +598,6 @@ begin
 		begin
 			State <= (TxCount == 32'h2) ? TCP_RCV4 : RATE1;
 		end
-		
-		
-		/* 8 kB overflow: */
-		/*TCP_RCV3A :
-		begin
-			Write1bRegisterWrapped(10'h22E, FreeSize[15:0], TCP_RCV3B);		// TX_FIFO 
-			if (ONE_BYTE_DONE)
-				TxCount <= TxCount + 32'b1;
-		end
-		TCP_RCV3B :
-		begin
-			Read2bRegisterWrapped({10'h224,10'h226}, FreeSize, TCP_RCV3C);	// RX_FSR 
-		end
-		TCP_RCV3C :
-		begin
-			State <= (FreeSize == 32'h0) ? TCP_RCV4 : TCP_RCV3A;
-		end*/
-		/*TCP_RCV3A :
-		begin
-			Read2bRegisterWrapped({10'h224,10'h226}, FreeSize, TCP_RCV3B);	// RX_FSR 
-		end
-		TCP_RCV3B :
-		begin
-			State <= (FreeSize == 32'h0) ? TCP_RCV4 : TCP_RCV3C;		
-		end
-		TCP_RCV3C :
-		begin
-			Write1bRegisterWrapped(10'h22E, FreeSize[15:0], TCP_RCV3A);		// TX_FIFO 
-			if (ONE_BYTE_DONE)
-				TxCount <= TxCount + 32'b1;
-		end*/
-		
-		/* All capital letters: */
-		/* TCP_RCV3A :
-		begin
-			if (ONE_BYTE_DONE)
-			begin
-				JumpToState(TCP_RCV3B);
-				TxCount <= TxCount + 32'b1;
-			end
-			else
-				Write1bRegister(10'h22E, TxCount + 32'h41);	// TX_FIFO 
-		end
-		TCP_RCV3B :
-		begin
-			State <= (TxCount >= 32'd26) ? TCP_RCV4 : TCP_RCV3A;
-		end */
-		
-		/* Get received size: */
-		/*TCP_RCV3A :
-		begin
-			if (ONE_BYTE_DONE)
-			begin
-				JumpToState(TCP_RCV3B);
-				TxCount <= TxCount + 32'b1;
-			end
-			else
-				Write1bRegister(10'h22E, Temp >> (TxCount << 4));	// TX_FIFO 
-		end
-		TCP_RCV3B :
-		begin
-			State <= (TxCount >= 32'd2) ? TCP_RCV4 : TCP_RCV3A;
-		end*/
-				
-		/* Get free size: */
-		/*TCP_RCV3A :
-		begin
-			if (TWO_BYTES_DONE)
-				JumpToState(TCP_RCV3B);
-			else
-				Read2bRegister({10'h224,10'h226}, RxCount);	// RX_FSR 
-		end
-		TCP_RCV3B :
-		begin
-			if (ONE_BYTE_DONE)
-			begin
-				JumpToState(TCP_RCV3C);
-				TxCount <= TxCount + 32'b1;
-			end
-			else
-				Write1bRegister(10'h22E, RxCount >> (TxCount << 4));	// TX_FIFO 
-		end
-		TCP_RCV3C :
-		begin
-			State <= (TxCount >= 32'd2) ? TCP_RCV4 : TCP_RCV3B;
-		end*/
-		
-		/* TCP_RCV3 :
-		begin
-			if (ONE_BYTE_DONE)
-				JumpToState(TCP_RCV4);
-			else
-				Write1bRegister(10'h22E, 16'h5859);	// TX_FIFO 
-		end*/
 		
 		TCP_RCV4 :
 		begin
